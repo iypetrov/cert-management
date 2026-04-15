@@ -13,10 +13,12 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	certmanv1alpha1 "github.com/gardener/cert-management/pkg/apis/cert/v1alpha1"
+	"github.com/gardener/cert-management/pkg/shared"
 )
 
 // CertInput contains basic certificate data.
@@ -30,6 +32,7 @@ type CertInput struct {
 	PrivateKeyAlgorithm string
 	PrivateKeySize      int
 	PrivateKeyEncoding  string
+	RenewBefore         *metav1.Duration
 	Annotations         map[string]string
 }
 
@@ -99,6 +102,7 @@ func augmentFromCommonAnnotations(annotations map[string]string, certInput CertI
 	certInput.PrivateKeyAlgorithm = algorithm
 	certInput.PrivateKeySize = keySize
 	certInput.PrivateKeyEncoding = encoding
+	certInput.RenewBefore, _ = shared.ParseRenewBefore(annotations[AnnotRenewBefore])
 	certInput.SecretLabels = extractSecretLabels(annotations)
 	certInput.Annotations = copyAnnotations(annotations, AnnotClass, AnnotDNSRecordProviderType, AnnotDNSRecordSecretRef)
 	return certInput
@@ -203,6 +207,7 @@ func CreateSpec(src CertInput) certmanv1alpha1.CertificateSpec {
 	}
 
 	spec.PrivateKey = createPrivateKey(src.PrivateKeyAlgorithm, src.PrivateKeySize, src.PrivateKeyEncoding)
+	spec.RenewBefore = src.RenewBefore
 
 	return spec
 }
